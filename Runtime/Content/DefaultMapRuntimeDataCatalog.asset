@@ -12,5 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72242f31503f5844a842fd1ed43c122f, type: 3}
   m_Name: DefaultMapRuntimeDataCatalog
   m_EditorClassIdentifier: 
-  entries: []
-  defaultRuntimeDataPrefab: {fileID: 0}
+  entries:
+  - mapId: GenericAirport
+    runtimeDataPrefab: {fileID: 4650648034859747300, guid: 4f5c493f01503d44e805c3e853fc558e, type: 3}
+  - mapId: KualaLumpurInternationalAirport
+    runtimeDataPrefab: {fileID: 746613281849653898, guid: f1429ef6d5bd5294880df516b40b7020, type: 3}
+  - mapId: BengaluruAirport
+    runtimeDataPrefab: {fileID: 7454595987961520950, guid: 3d78a5c4441014f46b044e5d6f2de602, type: 3}
+  - mapId: NewDelhiAirport
+    runtimeDataPrefab: {fileID: 1665874112047982902, guid: ce66cca9768d45a4db32add0ff6d06a7, type: 3}
+  - mapId: HyderabadAirport
+    runtimeDataPrefab: {fileID: 6724399489121242207, guid: 50af1362e5f4af54ea5f2a1d5a7c9f40, type: 3}
+  - mapId: JeddahAirport
+    runtimeDataPrefab: {fileID: 2276146073802636879, guid: 6b1fc603100f608469812e53e5935c49, type: 3}
+  - mapId: KLIAT1
+    runtimeDataPrefab: {fileID: 746613281849653898, guid: f1429ef6d5bd5294880df516b40b7020, type: 3}
+  - mapId: ManilaAirport
+    runtimeDataPrefab: {fileID: 2940356683737841946, guid: ae4f2ef1a4d2ce84aaf5b4fab50b6df0, type: 3}
+  defaultRuntimeDataPrefab: {fileID: 4650648034859747300, guid: 4f5c493f01503d44e805c3e853fc558e, type: 3}

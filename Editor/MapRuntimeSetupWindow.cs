@@ -12,6 +12,9 @@ namespace Simmac.GleyAIDynamic.Editor
         private const string DefaultCatalogFolder = "Assets/Simmac/GleyAIDynamic";
         private const string DefaultCatalogPath =
             DefaultCatalogFolder + "/MapRuntimeDataCatalog.asset";
+        private const string DefaultPackageCatalogPath =
+            "Packages/com.simmac.gleyaidynamic/Runtime/Content/" +
+            "DefaultMapRuntimeDataCatalog.asset";
 
         [SerializeField]
         private MonoBehaviour gameManager;
@@ -99,7 +102,7 @@ namespace Simmac.GleyAIDynamic.Editor
                 }
             }
 
-            if (GUILayout.Button("Create Project Catalog"))
+            if (GUILayout.Button("Create Editable Catalog Copy"))
             {
                 CreateProjectCatalog();
             }
@@ -128,8 +131,17 @@ namespace Simmac.GleyAIDynamic.Editor
             EnsureFolder(DefaultCatalogFolder);
 
             string path = AssetDatabase.GenerateUniqueAssetPath(DefaultCatalogPath);
-            MapRuntimeDataCatalog newCatalog =
-                CreateInstance<MapRuntimeDataCatalog>();
+            MapRuntimeDataCatalog templateCatalog =
+                AssetDatabase.LoadAssetAtPath<MapRuntimeDataCatalog>(
+                    DefaultPackageCatalogPath);
+
+            MapRuntimeDataCatalog newCatalog = templateCatalog != null
+                ? Instantiate(templateCatalog)
+                : catalog != null
+                    ? Instantiate(catalog)
+                : CreateInstance<MapRuntimeDataCatalog>();
+
+            newCatalog.name = "MapRuntimeDataCatalog";
 
             AssetDatabase.CreateAsset(newCatalog, path);
             AssetDatabase.SaveAssets();
@@ -139,7 +151,7 @@ namespace Simmac.GleyAIDynamic.Editor
             Selection.activeObject = newCatalog;
             EditorGUIUtility.PingObject(newCatalog);
             SetStatus(
-                $"Created catalog at '{path}'. Add one entry for each map.",
+                $"Created editable catalog copy at '{path}'.",
                 MessageType.Info);
         }
 
