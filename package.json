@@ -1,0 +1,12 @@
+{
+    "name": "com.simmac.gleyaidynamic",
+    "displayName": "Gley AI Dynamic",
+    "version": "1.0.0",
+    "unity": "2021.3",
+    "description": "Gley AI Dynamic is a Unity package that allows you to create dynamic AI agents that can navigate and interact with the environment in real-time.",
+    "keywords": ["upm", "package"],
+    "author": {
+        "name": "Simmac",
+        "url": "https://sim-mac.com"
+    }
+}
