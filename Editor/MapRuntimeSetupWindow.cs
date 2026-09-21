@@ -1,20 +1,34 @@
 using System;
+using System.IO;
 using System.Linq;
 using Simmac.GleyAIDynamic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using PackageSample = UnityEditor.PackageManager.UI.Sample;
 
 namespace Simmac.GleyAIDynamic.Editor
 {
     public sealed class MapRuntimeSetupWindow : EditorWindow
     {
-        private const string DefaultCatalogFolder = "Assets/Simmac/GleyAIDynamic";
-        private const string DefaultCatalogPath =
-            DefaultCatalogFolder + "/MapRuntimeDataCatalog.asset";
-        private const string DefaultPackageCatalogPath =
-            "Packages/com.simmac.gleyaidynamic/Runtime/Content/" +
-            "DefaultMapRuntimeDataCatalog.asset";
+        private const string PackageName = "com.simmac.gleyaidynamic";
+        private const string SampleDisplayName = "Dynamic Map AI Content";
+        private const string ContentFolderName = "Dynamic Map AI";
+        private const string CatalogFileName = "DefaultMapRuntimeDataCatalog.asset";
+        private const string ContentRootPath = "Assets/Simmac/GleyAIDynamic";
+        private const string ContentTargetPath =
+            ContentRootPath + "/" + ContentFolderName;
+        private const string CatalogTargetPath =
+            ContentRootPath + "/" + CatalogFileName;
+        private const string MissingCatalogHelp =
+            "No MapRuntimeDataCatalog was found under Assets. Press \"Import or Update " +
+            "Map Content\" to copy the map prefabs and the catalog out of the package " +
+            "into " + ContentRootPath + ".";
+        private const string ContentOwnershipHelp =
+            "Map prefabs are owned by the package: every sync replaces " +
+            ContentTargetPath + " with the packaged copy, so do not hand-edit them here. " +
+            "The catalog at " + CatalogTargetPath + " is owned by this project and is " +
+            "only created when missing, so project-specific map entries are never lost.";
 
         [SerializeField]
         private MonoBehaviour gameManager;
@@ -96,15 +110,30 @@ namespace Simmac.GleyAIDynamic.Editor
                     catalog = FindCatalog();
                     SetStatus(
                         catalog != null
-                            ? $"Found catalog '{catalog.name}'."
-                            : "No MapRuntimeDataCatalog asset was found.",
+                            ? $"Found catalog at '{AssetDatabase.GetAssetPath(catalog)}'."
+                            : MissingCatalogHelp,
                         catalog != null ? MessageType.Info : MessageType.Warning);
                 }
             }
 
-            if (GUILayout.Button("Create Editable Catalog Copy"))
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Map Content", EditorStyles.boldLabel);
+
+            if (catalog == null)
             {
-                CreateProjectCatalog();
+                EditorGUILayout.HelpBox(MissingCatalogHelp, MessageType.Warning);
+            }
+
+            if (GUILayout.Button("Import or Update Map Content", GUILayout.Height(24f)))
+            {
+                SyncMapContent();
+            }
+
+            EditorGUILayout.HelpBox(ContentOwnershipHelp, MessageType.Info);
+
+            if (GUILayout.Button("Open Package Manager"))
+            {
+                UnityEditor.PackageManager.UI.Window.Open(PackageName);
             }
 
             EditorGUILayout.Space();
@@ -126,33 +155,169 @@ namespace Simmac.GleyAIDynamic.Editor
             EditorGUILayout.HelpBox(validationMessage, validationMessageType);
         }
 
-        private void CreateProjectCatalog()
+        private void SyncMapContent()
         {
-            EnsureFolder(DefaultCatalogFolder);
+            if (!TryGetSampleSourcePath(out string sampleRoot, out string error))
+            {
+                SetStatus(error, MessageType.Error);
+                return;
+            }
 
-            string path = AssetDatabase.GenerateUniqueAssetPath(DefaultCatalogPath);
-            MapRuntimeDataCatalog templateCatalog =
-                AssetDatabase.LoadAssetAtPath<MapRuntimeDataCatalog>(
-                    DefaultPackageCatalogPath);
+            string prefabSource = Path.Combine(sampleRoot, ContentFolderName);
 
-            MapRuntimeDataCatalog newCatalog = templateCatalog != null
-                ? Instantiate(templateCatalog)
-                : catalog != null
-                    ? Instantiate(catalog)
-                : CreateInstance<MapRuntimeDataCatalog>();
+            if (!Directory.Exists(prefabSource))
+            {
+                SetStatus(
+                    $"The package sample has no '{ContentFolderName}' folder at " +
+                    $"'{prefabSource}'.",
+                    MessageType.Error);
+                return;
+            }
 
-            newCatalog.name = "MapRuntimeDataCatalog";
+            bool targetExists = Directory.Exists(ContentTargetPath);
 
-            AssetDatabase.CreateAsset(newCatalog, path);
-            AssetDatabase.SaveAssets();
+            if (targetExists && !EditorUtility.DisplayDialog(
+                    "Replace map content?",
+                    $"'{ContentTargetPath}' will be deleted and replaced with the copy " +
+                    $"shipped in {PackageName}.\n\nLocal edits to those map prefabs will " +
+                    "be lost. The catalog is not affected.",
+                    "Replace",
+                    "Cancel"))
+            {
+                return;
+            }
+
+            Directory.CreateDirectory(ContentRootPath);
+
+            if (AssetDatabase.IsValidFolder(ContentTargetPath))
+            {
+                AssetDatabase.DeleteAsset(ContentTargetPath);
+            }
+            else if (targetExists)
+            {
+                Directory.Delete(ContentTargetPath, true);
+            }
+
+            FileUtil.DeleteFileOrDirectory(ContentTargetPath + ".meta");
+
+            CopyDirectory(prefabSource, ContentTargetPath);
+
+            // Carry the folder's own .meta across so its GUID survives the sync.
+            CopyFileIfMissingOrForced(
+                prefabSource + ".meta",
+                ContentTargetPath + ".meta",
+                true);
+
+            bool catalogCreated = CopyFileIfMissingOrForced(
+                Path.Combine(sampleRoot, CatalogFileName),
+                CatalogTargetPath,
+                false);
+
+            if (catalogCreated)
+            {
+                CopyFileIfMissingOrForced(
+                    Path.Combine(sampleRoot, CatalogFileName + ".meta"),
+                    CatalogTargetPath + ".meta",
+                    false);
+            }
+
             AssetDatabase.Refresh();
 
-            catalog = newCatalog;
-            Selection.activeObject = newCatalog;
-            EditorGUIUtility.PingObject(newCatalog);
+            if (catalog == null)
+            {
+                catalog = FindCatalog();
+            }
+
+            string catalogNote = catalogCreated
+                ? $"Created the project catalog at '{CatalogTargetPath}'."
+                : "Left the existing project catalog untouched.";
+
             SetStatus(
-                $"Created editable catalog copy at '{path}'.",
+                $"Map prefabs synced into '{ContentTargetPath}'. {catalogNote}",
                 MessageType.Info);
+        }
+
+        private static bool TryGetSampleSourcePath(out string sampleRoot, out string error)
+        {
+            sampleRoot = null;
+
+            UnityEditor.PackageManager.PackageInfo packageInfo =
+                UnityEditor.PackageManager.PackageInfo.FindForAssembly(
+                    typeof(MapRuntimeDataCatalog).Assembly);
+
+            if (packageInfo == null)
+            {
+                error =
+                    $"'{PackageName}' is not resolved as a UPM package, so its sample " +
+                    "content cannot be located.";
+                return false;
+            }
+
+            PackageSample sample = PackageSample
+                .FindByPackage(packageInfo.name, packageInfo.version)
+                .FirstOrDefault(candidate => candidate.displayName == SampleDisplayName);
+
+            if (!string.IsNullOrEmpty(sample.resolvedPath) &&
+                Directory.Exists(sample.resolvedPath))
+            {
+                error = null;
+                sampleRoot = sample.resolvedPath;
+                return true;
+            }
+
+            // Embedded and local packages are not always reported through the sample
+            // API, so fall back to the on-disk layout.
+            string fallbackPath = Path.Combine(
+                packageInfo.resolvedPath,
+                "Samples~",
+                SampleDisplayName);
+
+            if (Directory.Exists(fallbackPath))
+            {
+                error = null;
+                sampleRoot = fallbackPath;
+                return true;
+            }
+
+            error =
+                $"The '{SampleDisplayName}' sample was not found in " +
+                $"{packageInfo.name}@{packageInfo.version}. Update the package to a " +
+                "version that ships it.";
+            return false;
+        }
+
+        private static void CopyDirectory(string source, string target)
+        {
+            Directory.CreateDirectory(target);
+
+            foreach (string filePath in Directory.GetFiles(source))
+            {
+                File.Copy(
+                    filePath,
+                    Path.Combine(target, Path.GetFileName(filePath)),
+                    true);
+            }
+
+            foreach (string directoryPath in Directory.GetDirectories(source))
+            {
+                CopyDirectory(
+                    directoryPath,
+                    Path.Combine(target, Path.GetFileName(directoryPath)));
+            }
+        }
+
+        private static bool CopyFileIfMissingOrForced(
+            string source,
+            string target,
+            bool overwrite)
+        {
+            if (!File.Exists(source) || (!overwrite && File.Exists(target)))
+            {
+                return false;
+            }
+
+            File.Copy(source, target, overwrite);
+            return true;
         }
 
         private void InstallOrUpdate()
@@ -296,24 +461,6 @@ namespace Simmac.GleyAIDynamic.Editor
             string selectedGuid = preferredGuid ?? guids[0];
             string path = AssetDatabase.GUIDToAssetPath(selectedGuid);
             return AssetDatabase.LoadAssetAtPath<MapRuntimeDataCatalog>(path);
-        }
-
-        private static void EnsureFolder(string folderPath)
-        {
-            string[] parts = folderPath.Split('/');
-            string currentPath = parts[0];
-
-            for (int i = 1; i < parts.Length; i++)
-            {
-                string nextPath = currentPath + "/" + parts[i];
-
-                if (!AssetDatabase.IsValidFolder(nextPath))
-                {
-                    AssetDatabase.CreateFolder(currentPath, parts[i]);
-                }
-
-                currentPath = nextPath;
-            }
         }
 
         private void SetStatus(string message, MessageType messageType)

@@ -28,7 +28,7 @@ MonoBehaviour:
   - mapId: KLIAT1
     runtimeDataPrefab: {fileID: 746613281849653898, guid: f1429ef6d5bd5294880df516b40b7020, type: 3}
   - mapId: ManilaAirport
-    runtimeDataPrefab: {fileID: 2940356683737841946, guid: ae4f2ef1a4d2ce84aaf5b4fab50b6df0, type: 3}
+    runtimeDataPrefab: {fileID: 6463300046887977743, guid: ae4f2ef1a4d2ce84aaf5b4fab50b6df0, type: 3}
   - mapId: CebuAirport
     runtimeDataPrefab: {fileID: 8898906884581373364, guid: e667c9b402394ac4ea77da788ce3c122, type: 3}
   defaultRuntimeDataPrefab: {fileID: 4650648034859747300, guid: 4f5c493f01503d44e805c3e853fc558e, type: 3}

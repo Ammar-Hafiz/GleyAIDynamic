@@ -1,12 +1,19 @@
 {
     "name": "com.simmac.gleyaidynamic",
     "displayName": "Gley AI Dynamic",
-    "version": "1.0.5",
+    "version": "1.1.0",
     "unity": "2021.3",
     "description": "Gley AI Dynamic is a Unity package that allows you to create dynamic AI agents that can navigate and interact with the environment in real-time.",
     "keywords": ["upm", "package"],
     "author": {
         "name": "Simmac",
         "url": "https://sim-mac.com"
-    }
+    },
+    "samples": [
+        {
+            "displayName": "Dynamic Map AI Content",
+            "description": "Editable Gley traffic data for all supported airport maps.",
+            "path": "Samples~/Dynamic Map AI Content"
+        }
+    ]
 }
